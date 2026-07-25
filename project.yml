@@ -32,6 +32,7 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleDisplayName: Phone Watch Test
+        ITSAppUsesNonExemptEncryption: false
         UILaunchScreen: {}
     settings:
       base:
@@ -62,6 +63,7 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleDisplayName: Habits
+        ITSAppUsesNonExemptEncryption: false
         WKApplication: true
         WKCompanionAppBundleIdentifier: com.notzenco.phonewatchtest
         WKRunsIndependentlyOfCompanionApp: false
