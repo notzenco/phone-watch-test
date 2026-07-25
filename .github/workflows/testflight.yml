@@ -140,8 +140,6 @@ jobs:
             <true/>
             <key>teamID</key>
             <string>${APPLE_TEAM_ID}</string>
-            <key>testFlightInternalTestingOnly</key>
-            <true/>
             <key>uploadSymbols</key>
             <true/>
           </dict>
