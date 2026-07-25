@@ -76,8 +76,7 @@ schemes:
   PhoneWatchTestTests:
     build:
       targets:
-        PhoneWatchTestTests:
-          - test
+        PhoneWatchTestTests: all
     test:
       targets:
         - PhoneWatchTestTests
