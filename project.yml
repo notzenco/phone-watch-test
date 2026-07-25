@@ -69,7 +69,6 @@ schemes:
     build:
       targets:
         PhoneWatchTest: all
-        PhoneWatchTestWatch: all
         PhoneWatchTestTests:
           - test
     test:
@@ -80,4 +79,3 @@ schemes:
     build:
       targets:
         PhoneWatchTestWatch: all
-
