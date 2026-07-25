@@ -42,7 +42,6 @@ jobs:
           xcodebuild \
             -project PhoneWatchTest.xcodeproj \
             -scheme PhoneWatchTest \
-            -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath DerivedData \
             CODE_SIGNING_ALLOWED=NO \
