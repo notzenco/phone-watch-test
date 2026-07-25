@@ -65,6 +65,12 @@ extension WatchHabitStore: WCSessionDelegate {
         error: Error?
     ) {}
 
+#if os(iOS)
+    nonisolated func sessionDidBecomeInactive(_ session: WCSession) {}
+
+    nonisolated func sessionDidDeactivate(_ session: WCSession) {}
+#endif
+
     nonisolated func session(
         _ session: WCSession,
         didReceiveApplicationContext applicationContext: [String: Any]
