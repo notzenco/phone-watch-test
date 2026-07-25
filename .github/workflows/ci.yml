@@ -1,0 +1,61 @@
+name: Xcode 27 CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: xcode-27
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify Xcode image
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes
+
+      - name: Install XcodeGen 2.45.4
+        run: |
+          curl --fail --location --silent --show-error \
+            --output /tmp/xcodegen.zip \
+            https://github.com/yonaskolb/XcodeGen/releases/download/2.45.4/xcodegen.zip
+          unzip -q /tmp/xcodegen.zip -d /tmp
+          sudo /tmp/xcodegen/install.sh
+          xcodegen --version
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build and test iPhone app
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project PhoneWatchTest.xcodeproj \
+            -scheme PhoneWatchTest \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=27.0' \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            clean test
+
+      - name: Build Watch app
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project PhoneWatchTest.xcodeproj \
+            -scheme PhoneWatchTestWatch \
+            -destination 'generic/platform=watchOS Simulator' \
+            -derivedDataPath DerivedData-Watch \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+
