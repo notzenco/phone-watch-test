@@ -32,3 +32,9 @@ XcodeGen is pinned to version 2.45.4 in CI.
 
 Signing credentials are never stored in this repository.
 
+## TestFlight
+
+The manual `TestFlight` GitHub Actions workflow creates a signed Release
+archive and uploads it for private internal testing. Each run uses its GitHub
+run number as the Apple build number, so retries and later releases remain
+unique.

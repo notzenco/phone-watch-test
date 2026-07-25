@@ -1,0 +1,149 @@
+name: TestFlight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+jobs:
+  archive-and-upload:
+    runs-on: xcode-27
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify Xcode image
+        run: xcodebuild -version
+
+      - name: Install XcodeGen 2.45.4
+        run: |
+          curl --fail --location --silent --show-error \
+            --output /tmp/xcodegen.zip \
+            https://github.com/yonaskolb/XcodeGen/releases/download/2.45.4/xcodegen.zip
+          unzip -q /tmp/xcodegen.zip -d /tmp
+          sudo /tmp/xcodegen/install.sh
+          xcodegen --version
+
+      - name: Install signing assets
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+          WATCH_PROVISIONING_PROFILE: ${{ secrets.WATCH_PROVISIONING_PROFILE }}
+        run: |
+          set -euo pipefail
+
+          certificate_path="$RUNNER_TEMP/apple-distribution.p12"
+          keychain_path="$RUNNER_TEMP/app-signing.keychain-db"
+          keychain_password="$(uuidgen)"
+          profiles_path="$HOME/Library/MobileDevice/Provisioning Profiles"
+
+          printf '%s' "$APPLE_CERTIFICATE_P12" | base64 -D > "$certificate_path"
+          mkdir -p "$profiles_path"
+          printf '%s' "$IOS_PROVISIONING_PROFILE" | base64 -D \
+            > "$profiles_path/ios.mobileprovision"
+          printf '%s' "$WATCH_PROVISIONING_PROFILE" | base64 -D \
+            > "$profiles_path/watch.mobileprovision"
+
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security import "$certificate_path" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$keychain_path"
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -k "$keychain_password" \
+            "$keychain_path"
+          security list-keychains -d user -s "$keychain_path"
+          security find-identity -v -p codesigning "$keychain_path"
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Archive signed app
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project PhoneWatchTest.xcodeproj \
+            -scheme PhoneWatchTest \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/PhoneWatchTest.xcarchive" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            clean archive
+
+      - name: Upload to App Store Connect
+        env:
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+
+          auth_key_path="$RUNNER_TEMP/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          export_options_path="$RUNNER_TEMP/ExportOptions.plist"
+          printf '%s' "$APP_STORE_CONNECT_API_KEY" > "$auth_key_path"
+
+          cat > "$export_options_path" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>destination</key>
+            <string>upload</string>
+            <key>manageAppVersionAndBuildNumber</key>
+            <false/>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.notzenco.phonewatchtest</key>
+              <string>Phone Watch Test App Store</string>
+              <key>com.notzenco.phonewatchtest.watchkitapp</key>
+              <string>Phone Watch Test Watch App Store</string>
+            </dict>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>stripSwiftSymbols</key>
+            <true/>
+            <key>teamID</key>
+            <string>${APPLE_TEAM_ID}</string>
+            <key>testFlightInternalTestingOnly</key>
+            <true/>
+            <key>uploadSymbols</key>
+            <true/>
+          </dict>
+          </plist>
+          PLIST
+
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$RUNNER_TEMP/PhoneWatchTest.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$export_options_path" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$auth_key_path" \
+            -authenticationKeyID "$APP_STORE_CONNECT_API_KEY_ID" \
+            -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID"
+
+      - name: Preserve archive logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testflight-distribution-logs-${{ github.run_number }}
+          path: |
+            ${{ runner.temp }}/export/DistributionSummary.plist
+            ${{ runner.temp }}/export/Packaging.log
+          if-no-files-found: ignore
+          retention-days: 14
