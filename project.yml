@@ -54,11 +54,10 @@ targets:
 
   PhoneWatchTestTests:
     type: bundle.unit-test
-    platform: iOS
+    platform: macOS
     sources:
+      - path: Shared
       - path: PhoneWatchTestTests
-    dependencies:
-      - target: PhoneWatchTest
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.notzenco.phonewatchtest.tests
@@ -69,13 +68,16 @@ schemes:
     build:
       targets:
         PhoneWatchTest: all
+  PhoneWatchTestWatch:
+    build:
+      targets:
+        PhoneWatchTestWatch: all
+  PhoneWatchTestTests:
+    build:
+      targets:
         PhoneWatchTestTests:
           - test
     test:
       targets:
         - PhoneWatchTestTests
       gatherCoverageData: true
-  PhoneWatchTestWatch:
-    build:
-      targets:
-        PhoneWatchTestWatch: all

@@ -1,5 +1,4 @@
 import XCTest
-@testable import PhoneWatchTest
 
 final class HabitTests: XCTestCase {
     private var calendar: Calendar {
@@ -42,4 +41,3 @@ final class HabitTests: XCTestCase {
         XCTAssertEqual(decoded, [habit])
     }
 }
-

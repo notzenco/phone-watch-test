@@ -36,15 +36,26 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Build and test iPhone app
+      - name: Build iPhone app
         run: |
           set -o pipefail
           xcodebuild \
             -project PhoneWatchTest.xcodeproj \
             -scheme PhoneWatchTest \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=27.0' \
+            -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+
+      - name: Test shared habit model
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project PhoneWatchTest.xcodeproj \
+            -scheme PhoneWatchTestTests \
+            -destination 'platform=macOS' \
+            -derivedDataPath DerivedData-Tests \
             CODE_SIGNING_ALLOWED=NO \
             clean test
 
@@ -58,4 +69,3 @@ jobs:
             -derivedDataPath DerivedData-Watch \
             CODE_SIGNING_ALLOWED=NO \
             clean build
-
