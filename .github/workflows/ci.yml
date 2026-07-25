@@ -54,6 +54,7 @@ jobs:
           xcodebuild \
             -project PhoneWatchTest.xcodeproj \
             -scheme PhoneWatchTestTests \
+            -sdk macosx \
             -destination 'platform=macOS' \
             -derivedDataPath DerivedData-Tests \
             CODE_SIGNING_ALLOWED=NO \
